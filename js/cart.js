@@ -654,7 +654,43 @@ function captureShipping() {
 }
 
 // ── Render checkout modal ─────────────────────────────────
+// ── Shared payment-method design (one look for every method) ──
+function ensurePayStyles() {
+  if (document.getElementById('pm-styles')) return;
+  var st = document.createElement('style');
+  st.id = 'pm-styles';
+  st.textContent = [
+    '.pm-label{display:flex;align-items:center;gap:10px;margin:0 0 10px;font-family:var(--font-c);font-size:.58rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--smoke)}',
+    '.pm-label::after{content:"";flex:1;height:1px;background:var(--border)}',
+    '.pm-group{margin-top:22px}',
+    '.pm-stack>*+*{margin-top:10px}',
+    '.pm-stack>*:empty{display:none}',
+    '.pm-btn{width:100%;height:48px;border:0;border-radius:4px;display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--font-c);font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:filter .15s,transform .05s;box-sizing:border-box}',
+    '.pm-btn:hover{filter:brightness(1.06)}',
+    '.pm-btn:active{transform:translateY(1px)}',
+    '.pm-btn[disabled]{opacity:.6;cursor:default;filter:none}',
+    '.pm-btn--zelle{background:#6D1ED4;color:#fff}',
+    '.pm-btn--cash{background:#00D632;color:#000}',
+    '.pm-btn--btc{background:#F7931A;color:#fff}',
+    '.pm-btn--plan{background:#B2FCE4;color:#000}',
+    '.pm-panel{border:1px solid var(--border);border-radius:4px;padding:16px;background:var(--card)}',
+    '.pm-panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}',
+    '.pm-panel-title{font-family:var(--font-c);font-size:.68rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase}',
+    '.pm-close{background:none;border:0;color:var(--smoke);font-size:1rem;line-height:1;padding:4px 6px;cursor:pointer}',
+    '.pm-close:hover{color:var(--white)}',
+    '.pm-text{margin:0 0 10px;font-family:var(--font-b);font-size:.84rem;line-height:1.5;color:var(--light)}',
+    '.pm-text strong{color:var(--white)}',
+    '.pm-copy{border:1px solid var(--border);border-radius:3px;padding:12px;margin-bottom:10px;font-family:var(--font-c);font-size:.9rem;font-weight:700;letter-spacing:.06em;color:#111;background:transparent;user-select:all;word-break:break-all}',
+    '.pm-note{font-family:var(--font-c);font-size:.62rem;letter-spacing:.06em;color:var(--smoke);line-height:1.5}',
+    '.pm-input{width:100%;box-sizing:border-box;margin-top:10px;padding:12px;border:1px solid var(--border);border-radius:3px;background:var(--card);color:var(--white);font-family:var(--font-b);font-size:16px;outline:none}',
+    '.pm-input:focus{border-color:var(--white)}',
+    '.pm-err{min-height:16px;margin:4px 0 8px;font-family:var(--font-c);font-size:.62rem;letter-spacing:.06em;color:#CE1126}'
+  ].join('\n');
+  document.head.appendChild(st);
+}
+
 function renderCheckoutModal(items, profile, addr) {
+  ensurePayStyles();
   const subtotal    = items.reduce((s,i) => s + i.price * i.qty, 0);
   const discount    = _appliedDiscount;
   const discountAmt = discount ? Math.round(subtotal * discount.pct) / 100 : 0;
@@ -726,12 +762,27 @@ function renderCheckoutModal(items, profile, addr) {
     // ── PAYMENT ───────────────────────────────────────────
     + '<div class="modal-section">'
     + '<div class="modal-section-title">Payment Method</div>'
-    + '<div id="paypal-button-container"></div>'
-    + '<div style="margin-top:10px;border-top:1px solid var(--border,#1a3a2a);padding-top:10px">'    + '<button id="paylater-btn" onclick="window.openPayLater()" style="width:100%;padding:13px;background:#006847;color:#fff;border:none;border-radius:4px;font-family:var(--font-c);font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">'    + '<span style="font-size:1rem">🐾</span> Pay in 4 — Payment Plan'    + '</button>'    + '<p style="text-align:center;font-family:var(--font-b);font-size:.65rem;color:var(--smoke);margin:5px 0 0">4 interest-free payments · via Afterpay or PayPal</p>'    + '</div>'
-    + '<div id="cashapp-container" style="margin-top:10px"></div>'
-    + '<div id="zelle-container" style="margin-top:10px"></div>'    + '<div id="square-cashapp-container" style="display:none;margin-top:10px"></div>'    + '<div id="square-afterpay-container" style="display:none;margin-top:10px"></div>'
-    + '<div id="bitcoin-container" style="margin-top:10px"></div>'
+    + '<div class="pm-label">Pay now</div>'
+    + '<div class="pm-stack">'
+    +   '<div id="paypal-button-container"></div>'
+    +   '<div id="square-cashapp-container" style="display:none"></div>'
     + '</div>'
+    + '<div class="pm-group"><div class="pm-label">Pay over time</div>'
+    +   '<div class="pm-stack">'
+    +     '<button id="paylater-btn" class="pm-btn pm-btn--plan" onclick="window.openPayLater()">Pay in 4 &mdash; Payment Plan</button>'
+    +     '<div class="pm-note" style="text-align:center">4 interest-free payments &middot; via Afterpay or PayPal</div>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="pm-group"><div class="pm-label">Pay by transfer</div>'
+    +   '<div class="pm-stack">'
+    +     '<div id="zelle-container"></div>'
+    +     '<div id="cashapp-container"></div>'
+    +     '<div id="bitcoin-container"></div>'
+    +   '</div>'
+    + '</div>'
+    + '<div id="square-afterpay-container" style="display:none"></div>'
+    + '</div>'
+
 
     + '<p class="modal-disclaimer">All products are sold for research purposes only and not intended for human consumption.</p>'
     + '</div>';
@@ -1095,149 +1146,65 @@ async function mountPayPal() {
 function mountCashApp() {
   var container = document.getElementById('cashapp-container');
   if (!container) return;
-
-  var items       = Cart.get();
-  var subtotal    = items.reduce(function(s,i) { return s + i.price * i.qty; }, 0);
-  var ship        = getSelectedShipping().price;
-  var discount    = _appliedDiscount;
-  var discountAmt = discount ? Math.round(subtotal * discount.pct) / 100 : 0;
-  var total       = Math.max(0.01, subtotal + ship - discountAmt).toFixed(2);
-
+  var total = currentCheckoutTotal().total.toFixed(2);
   container.innerHTML =
-    '<button id="cashapp-btn" onclick="showCashAppInput()" style="width:100%;height:48px;background:#00D632;color:#000;border:none;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--font-c);font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;transition:opacity .18s" onmouseover="this.style.opacity=\'.85\'" onmouseout="this.style.opacity=\'1\'">'
-    + '<svg width="20" height="20" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#00D632"/><path d="M22.5 9.5L16 16m0 0L9.5 9.5M16 16l6.5 6.5M16 16l-6.5 6.5" stroke="#000" stroke-width="2.5" stroke-linecap="round"/></svg>'
-    + 'Pay $' + total + ' with Cash App'
-    + '</button>'
-    + '<div id="cashapp-input-wrap" style="display:none;margin-top:10px">'
-    + '<label style="font-family:var(--font-c);font-size:.6rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#888;display:block;margin-bottom:4px">Your $Cashtag <span style="color:#00875A">*</span></label>'
-    + '<input id="cashapp-cashtag" type="text" placeholder="$YourCashTag" style="width:100%;background:#FFFFFF;border:1px solid #D8D8D8;color:#111;padding:10px 12px;font-size:16px;font-family:var(--font-b);outline:none;box-sizing:border-box;margin-bottom:6px" />'
-    + '<div id="err-cashtag" style="font-size:.62rem;color:#00875A;font-family:var(--font-c);min-height:14px;margin-bottom:6px"></div>'
-    + '<button onclick="payCashApp()" style="width:100%;height:46px;background:#00D632;color:#000;border:none;border-radius:4px;cursor:pointer;font-family:var(--font-c);font-size:.76rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Confirm & Send to Cash App →</button>'
-    + '<p style="font-size:.62rem;color:var(--smoke);text-align:center;margin-top:6px;font-style:italic;font-family:var(--font-c);letter-spacing:.06em">Send $' + total + ' to ' + CASHAPP_USERNAME + ' in Cash App</p>'
+    '<div id="cashapp-step1">'
+    +   '<button id="cashapp-btn" class="pm-btn pm-btn--cash" onclick="showCashAppInput()">'
+    +     '<svg width="18" height="18" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#000"/><path d="M20.5 12.2c-.6-1.1-1.8-1.7-3.3-1.7-1.8 0-3 .9-3 2.2 0 1.4 1.3 1.9 2.8 2.3 2.2.6 4 1.3 4 3.4 0 2-1.7 3.3-4.1 3.3-1.9 0-3.4-.8-4-2.3" stroke="#00D632" stroke-width="2" stroke-linecap="round"/><path d="M16.2 8v16" stroke="#00D632" stroke-width="2" stroke-linecap="round"/></svg> Pay with Cash App'
+    +   '</button>'
+    + '</div>'
+    + '<div id="cashapp-input-wrap" class="pm-panel" style="display:none">'
+    +   '<div class="pm-panel-head"><div class="pm-panel-title" style="color:#00A82A">Pay with Cash App</div>'
+    +     '<button class="pm-close" onclick="closeCashAppInput()" aria-label="Close">&#x2715;</button></div>'
+    +   '<p class="pm-text">Send <strong>$' + total + '</strong> to <strong>' + CASHAPP_USERNAME + '</strong> in Cash App. Enter your $Cashtag so we can match the payment.</p>'
+    +   '<input id="cashapp-cashtag" class="pm-input" type="text" placeholder="$YourCashTag" style="margin-top:0" />'
+    +   '<div id="err-cashtag" class="pm-err"></div>'
+    +   '<button class="pm-btn pm-btn--cash" onclick="payCashApp()">Confirm &amp; send to Cash App &rarr;</button>'
     + '</div>';
 }
-
 
 window.showCashAppInput = function() {
-  var wrap = document.getElementById('cashapp-input-wrap');
-  var btn  = document.getElementById('cashapp-btn');
-  if (wrap) wrap.style.display = 'block';
-  if (btn)  btn.style.display  = 'none';
-  setTimeout(function() {
-    var input = document.getElementById('cashapp-cashtag');
-    if (input) input.focus();
-  }, 50);
+  var a = document.getElementById('cashapp-step1'), b = document.getElementById('cashapp-input-wrap');
+  if (a) a.style.display = 'none';
+  if (b) b.style.display = 'block';
+  setTimeout(function(){ var i = document.getElementById('cashapp-cashtag'); if (i) i.focus(); }, 50);
 };
-
-
-
-
-function mountZelle() {
-  var container = document.getElementById('zelle-container');
-  if (!container) return;
-
-  var items       = Cart.get();
-  var subtotal    = items.reduce(function(s,i) { return s + i.price * i.qty; }, 0);
-  var ship        = getSelectedShipping().price;
-  var discount    = _appliedDiscount;
-  var discountAmt = discount ? Math.round(subtotal * discount.pct) / 100 : 0;
-  var total       = Math.max(0.01, subtotal + ship - discountAmt).toFixed(2);
-
-  container.innerHTML =
-    '<button id="zelle-btn" onclick="showZelleInput()" style="width:100%;height:48px;background:#6D1ED4;color:#fff;border:none;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--font-c);font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;transition:opacity .18s" onmouseover="this.style.opacity=\'.85\'" onmouseout="this.style.opacity=\'1\'">'
-    + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 5h11.5L4 19h16M13 5l-4 7" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    + 'Pay $' + total + ' with Zelle'
-    + '</button>'
-    + '<div id="zelle-input-wrap" style="display:none;margin-top:10px">'
-    + '<label style="font-family:var(--font-c);font-size:.6rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#888;display:block;margin-bottom:4px">Your Zelle Phone or Email <span style="color:#006847">*</span></label>'
-    + '<input id="zelle-handle" type="text" placeholder="(555) 555-5555 or email@bank.com" style="width:100%;background:#FFFFFF;border:1px solid #D8D8D8;color:#111;padding:10px 12px;font-size:16px;font-family:var(--font-b);outline:none;box-sizing:border-box;margin-bottom:6px" />'
-    + '<div id="err-zelle" style="font-size:.62rem;color:#CE1126;font-family:var(--font-c);min-height:14px;margin-bottom:6px"></div>'
-    + '<button onclick="payZelle()" style="width:100%;height:46px;background:#6D1ED4;color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:var(--font-c);font-size:.76rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Confirm & Send via Zelle →</button>'
-    + '<p style="font-size:.62rem;color:var(--smoke);text-align:center;margin-top:6px;font-style:italic;font-family:var(--font-c);letter-spacing:.06em">Send $' + total + ' to (254) 589-3596 in your bank app</p>'
-    + '</div>';
-}
-
-window.showZelleInput = function() {
-  var wrap = document.getElementById('zelle-input-wrap');
-  var btn  = document.getElementById('zelle-btn');
-  if (wrap) wrap.style.display = 'block';
-  if (btn)  btn.style.display  = 'none';
-  setTimeout(function() {
-    var input = document.getElementById('zelle-handle');
-    if (input) input.focus();
-  }, 50);
-};
-
-window.payZelle = async function() {
-  var handle   = (document.getElementById('zelle-handle')?.value.trim() || '');
-  var errEl    = document.getElementById('err-zelle');
-  if (!handle) {
-    if (errEl) errEl.textContent = 'Please enter your Zelle phone or email.';
-    return;
-  }
-  if (errEl) errEl.textContent = '';
-
-  var items        = Cart.get();
-  var subtotal     = items.reduce(function(s,i) { return s + i.price * i.qty; }, 0);
-  var ship         = getSelectedShipping().price;
-  var shippingData = captureShipping();
-  shippingData.zelle_handle = handle;
-  shippingData.payment_method = 'zelle';
-
-  if (!shippingValid()) {
-    SHIP_RULES.forEach(function(r) {
-      var el    = document.getElementById(r.id);
-      var errEl = document.getElementById(r.err);
-      if (el && errEl && !r.test(el.value.trim())) errEl.textContent = r.msg;
-    });
-    return;
-  }
-
-  // Open Zelle — try app deeplink on mobile, fall back to web
-  var zelleUrl = /Mobi|Android/i.test(navigator.userAgent)
-    ? 'zelle://send?phone=' + encodeURIComponent('2545893596')
-    : 'https://enroll.zellepay.com/pay-with-zelle';
-  window.open(zelleUrl, '_blank');
-
-  var btn = document.getElementById('zelle-btn') || document.querySelector('[onclick="payZelle()"]');
-  if (btn) {{ btn.disabled = true; btn.textContent = 'Awaiting Payment Verification…'; btn.style.background = '#888'; }}
-  await finishOrder(shippingData, 'pending_zelle');
+window.closeCashAppInput = function() {
+  var a = document.getElementById('cashapp-step1'), b = document.getElementById('cashapp-input-wrap');
+  if (b) b.style.display = 'none';
+  if (a) a.style.display = 'block';
 };
 
 function mountBitcoin() {
   var container = document.getElementById('bitcoin-container');
   if (!container) return;
-
-  var items       = Cart.get();
-  var subtotal    = items.reduce(function(s,i) { return s + i.price * i.qty; }, 0);
-  var ship        = getSelectedShipping().price;
-  var discount    = _appliedDiscount;
-  var discountAmt = discount ? Math.round(subtotal * discount.pct) / 100 : 0;
-  var total       = Math.max(0.01, subtotal + ship - discountAmt).toFixed(2);
-
+  var total = currentCheckoutTotal().total.toFixed(2);
   container.innerHTML =
-    '<button id="bitcoin-btn" onclick="showBitcoinInput()" style="width:100%;height:48px;background:#F7931A;color:#fff;border:none;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--font-c);font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;transition:opacity .18s" onmouseover="this.style.opacity=\'.85\'" onmouseout="this.style.opacity=\'1\'">'
-    + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm1 14.5V18h-2v-1.5c-1.66-.34-3-1.52-3-3s1.34-2.66 3-3V9h2v1.5c1.66.34 3 1.52 3 3s-1.34 2.66-3 3z" fill="#fff"/></svg>'
-    + 'Pay $' + total + ' with Bitcoin'
-    + '</button>'
-    + '<div id="bitcoin-input-wrap" style="display:none;margin-top:10px">'
-    + '<label style="font-family:var(--font-c);font-size:.6rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#888;display:block;margin-bottom:4px">Your Cash App or BTC Address <span style="color:#006847">*</span></label>'
-    + '<input id="bitcoin-handle" type="text" placeholder="$CTXLabs or bc1q..." style="width:100%;background:#FFFFFF;border:1px solid #D8D8D8;color:#111;padding:10px 12px;font-size:16px;font-family:var(--font-b);outline:none;box-sizing:border-box;margin-bottom:6px" />'
-    + '<div id="err-bitcoin" style="font-size:.62rem;color:#006847;font-family:var(--font-c);min-height:14px;margin-bottom:6px"></div>'
-    + '<button onclick="payBitcoin()" style="width:100%;height:46px;background:#F7931A;color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:var(--font-c);font-size:.76rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase">Confirm & Send Bitcoin →</button>'
-    + '<p style="font-size:.62rem;color:var(--smoke);text-align:center;margin-top:6px;font-style:italic;font-family:var(--font-c);letter-spacing:.06em">Send BTC to $CTXLabs via Cash App · USD equivalent: $' + total + '</p>'
+    '<div id="bitcoin-step1">'
+    +   '<button id="bitcoin-btn" class="pm-btn pm-btn--btc" onclick="showBitcoinInput()">'
+    +     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm1 14.5V18h-2v-1.5c-1.66-.34-3-1.52-3-3s1.34-2.66 3-3V9h2v1.5c1.66.34 3 1.52 3 3s-1.34 2.66-3 3z" fill="#fff"/></svg> Pay with Bitcoin'
+    +   '</button>'
+    + '</div>'
+    + '<div id="bitcoin-input-wrap" class="pm-panel" style="display:none">'
+    +   '<div class="pm-panel-head"><div class="pm-panel-title" style="color:#C4710A">Pay with Bitcoin</div>'
+    +     '<button class="pm-close" onclick="closeBitcoinInput()" aria-label="Close">&#x2715;</button></div>'
+    +   '<p class="pm-text">Send BTC to <strong>$CTXLabs</strong> via Cash App. USD equivalent: <strong>$' + total + '</strong>. Enter your Cash App or BTC address so we can match the payment.</p>'
+    +   '<input id="bitcoin-handle" class="pm-input" type="text" placeholder="$CTXLabs or bc1q..." style="margin-top:0" />'
+    +   '<div id="err-bitcoin" class="pm-err"></div>'
+    +   '<button class="pm-btn pm-btn--btc" onclick="payBitcoin()">Confirm &amp; send Bitcoin &rarr;</button>'
     + '</div>';
 }
 
 window.showBitcoinInput = function() {
-  var wrap = document.getElementById('bitcoin-input-wrap');
-  var btn  = document.getElementById('bitcoin-btn');
-  if (wrap) wrap.style.display = 'block';
-  if (btn)  btn.style.display  = 'none';
-  setTimeout(function() {
-    var input = document.getElementById('bitcoin-handle');
-    if (input) input.focus();
-  }, 50);
+  var a = document.getElementById('bitcoin-step1'), b = document.getElementById('bitcoin-input-wrap');
+  if (a) a.style.display = 'none';
+  if (b) b.style.display = 'block';
+  setTimeout(function(){ var i = document.getElementById('bitcoin-handle'); if (i) i.focus(); }, 50);
+};
+window.closeBitcoinInput = function() {
+  var a = document.getElementById('bitcoin-step1'), b = document.getElementById('bitcoin-input-wrap');
+  if (b) b.style.display = 'none';
+  if (a) a.style.display = 'block';
 };
 
 window.payBitcoin = async function() {
@@ -1503,32 +1470,37 @@ function sqcaFollow(token) {
 function mountZelle() {
   var container = document.getElementById('zelle-container');
   if (!container) return;
-
-  var items    = Cart.get();
-  var subtotal = items.reduce(function(s,i){ return s+i.price*i.qty; },0);
-  var disc     = _appliedDiscount ? subtotal*(_appliedDiscount.pct/100) : 0;
-  var ship     = getSelectedShipping ? getSelectedShipping().price : 25;
-  var total    = Math.max(0, subtotal - disc + ship).toFixed(2);
-
+  var calc  = currentCheckoutTotal();
+  var total = calc.total.toFixed(2);
   container.innerHTML =
     '<div id="zelle-step1">'
-    + '<button onclick="document.getElementById(&quot;zelle-step1&quot;).style.display=&quot;none&quot;;document.getElementById(&quot;zelle-step2&quot;).style.display=&quot;block&quot;" style="width:100%;padding:13px;background:#6d1ed4;color:#fff;border:none;border-radius:4px;font-family:var(--font-c);font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">'
-    + '<svg width="18" height="18" viewBox="0 0 48 48" fill="none"><path d="M8 8h32L24 40 8 8z" fill="#fff"/></svg>'
-    + ' Pay with Zelle'
-    + '</button>'
+    +   '<button class="pm-btn pm-btn--zelle" onclick="window.openZelle()">'
+    +     '<svg width="18" height="18" viewBox="0 0 48 48" fill="none"><path d="M8 8h32L24 40 8 8z" fill="#fff"/></svg> Pay with Zelle'
+    +   '</button>'
     + '</div>'
-    + '<div id="zelle-step2" style="display:none;border:1px solid var(--border);border-radius:4px;padding:16px;margin-top:4px">'
-    + '<div style="font-family:var(--font-c);font-size:.65rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--smoke);margin-bottom:12px">Zelle Payment Instructions</div>'
-    + '<div style="font-family:var(--font-b);font-size:.85rem;color:var(--light,#C2DAFF);margin-bottom:8px">Send <strong style="color:var(--white,#fff)">$' + total + '</strong> via Zelle to:</div>'
-    + '<div style="background:var(--surface,#07111F);border:1px solid var(--border);border-radius:3px;padding:12px;font-family:var(--font-c);font-size:.9rem;font-weight:700;color:var(--white,#fff);letter-spacing:.06em;margin-bottom:12px">Brandon.burnell@hotmail.com</div>'
-    + '<div style="font-family:var(--font-b);font-size:.78rem;color:var(--smoke);margin-bottom:14px">Include your name in the memo. Once sent, click confirm below.</div>'
-    + '<div style="display:flex;gap:8px">'
-    + '<input id="zelle-name-input" type="text" placeholder="Your name (as shown in Zelle)" style="flex:1;background:var(--card);border:1px solid var(--border);color:var(--white);padding:10px 12px;font-family:var(--font-b);font-size:.82rem;outline:none" />'
-    + '</div>'
-    + '<div id="err-zelle" style="font-size:.62rem;color:#CE1126;font-family:var(--font-c);letter-spacing:.06em;min-height:14px;margin-top:4px"></div>'
-    + '<button id="zelle-confirm-btn" onclick="window.confirmZelle()" style="width:100%;margin-top:12px;padding:12px;background:#6d1ed4;color:#fff;border:none;border-radius:4px;font-family:var(--font-c);font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer">I have Sent the Payment &#8212; Confirm Order</button>'
+    + '<div id="zelle-step2" class="pm-panel" style="display:none">'
+    +   '<div class="pm-panel-head"><div class="pm-panel-title" style="color:#6D1ED4">Pay with Zelle</div>'
+    +     '<button class="pm-close" onclick="window.closeZelle()" aria-label="Close">&#x2715;</button></div>'
+    +   '<p class="pm-text">Send <strong>$' + total + '</strong> via Zelle to:</p>'
+    +   '<div class="pm-copy">Brandon.burnell@hotmail.com</div>'
+    +   '<div class="pm-note">Include your name in the memo. Once sent, confirm below.</div>'
+    +   '<input id="zelle-name-input" class="pm-input" type="text" placeholder="Your name (as shown in Zelle)" />'
+    +   '<div id="err-zelle" class="pm-err"></div>'
+    +   '<button id="zelle-confirm-btn" class="pm-btn pm-btn--zelle" onclick="window.confirmZelle()">I\'ve sent the payment &mdash; confirm order</button>'
     + '</div>';
 }
+
+window.openZelle = function() {
+  var a = document.getElementById('zelle-step1'), b = document.getElementById('zelle-step2');
+  if (a) a.style.display = 'none';
+  if (b) b.style.display = 'block';
+  setTimeout(function(){ var i = document.getElementById('zelle-name-input'); if (i) i.focus(); }, 50);
+};
+window.closeZelle = function() {
+  var a = document.getElementById('zelle-step1'), b = document.getElementById('zelle-step2');
+  if (b) b.style.display = 'none';
+  if (a) a.style.display = 'block';
+};
 
 window.confirmZelle = async function() {
   var btn  = document.getElementById('zelle-confirm-btn');
